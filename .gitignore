@@ -1,0 +1,16 @@
+# Arquivos compilados
+bin/
+
+# Arquivos de objeto
+*.o
+
+# Backup files
+*~
+*.bak
+
+# Arquivos de desenvolvimento
+.vscode/
+*.code-workspace
+
+# Arquivos temporários
+*.tmp
