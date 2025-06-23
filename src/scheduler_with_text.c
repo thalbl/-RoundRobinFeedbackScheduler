@@ -3,12 +3,13 @@
 #include <time.h>
 #include <stdbool.h>
 #include <locale.h>
+#include <string.h>
 
 #define MAX_PROCESSOS 100
 #define TAMANHO_FILA 100
 #define QUANTUM_Q0 2
 #define QUANTUM_Q1 4
-#define PROBABILIDADE_IO 0.1
+#define PROBABILIDADE_IO 0.2
 #define TEMPO_MAXIMO 1000
 
 // Estados do processo
@@ -99,26 +100,34 @@ int desenfileirar(Fila *f) {
     return item;
 }
 
-// Inicialização dos processos
-void inicializar_processos(int n) {
-    srand(time(NULL));
-    total_processos = n;
-    for (int i = 0; i < n; i++) {
-        processos[i].pid = i + 1;
-        processos[i].ppid = 0;
-        processos[i].estado = PRONTO_Q0;
-        processos[i].tempo_chegada = 0;
-        processos[i].tempo_execucao = (rand() % 26) + 5; // 5-30 unidades
-        processos[i].tempo_restante = processos[i].tempo_execucao;
-        processos[i].tempo_espera = 0;
-        processos[i].inicio_espera = 0;
-        enfileirar(&fila0, i);
+// Função para carregar processos de um arquivo
+int carregar_processos(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Erro ao abrir o arquivo: %s\n", filename);
+        return 0;
     }
+
+    int count = 0;
+    while (fscanf(file, "%d %d", &processos[count].tempo_chegada, 
+                                &processos[count].tempo_execucao) == 2) {
+        processos[count].pid = count + 1;
+        processos[count].ppid = 0;
+        processos[count].estado = PRONTO_Q0;
+        processos[count].tempo_restante = processos[count].tempo_execucao;
+        processos[count].tempo_espera = 0;
+        processos[count].inicio_espera = 0;
+        
+        count++;
+        if (count >= MAX_PROCESSOS) break;
+    }
+
+    fclose(file);
+    return count;
 }
 
 // Atualização da fila de I/O
 void atualizar_fila_io() {
-    int i = 0;
     int count = fila_io.tamanho;
     
     while (count > 0) {
@@ -226,6 +235,19 @@ void executar_cpu() {
     }
 }
 
+// Adicionar processos que chegaram no tempo atual
+void adicionar_processos_chegados() {
+    for (int i = 0; i < total_processos; i++) {
+        if (processos[i].tempo_chegada == tempo_relogio) {
+            processos[i].estado = PRONTO_Q0;
+            processos[i].inicio_espera = tempo_relogio;
+            enfileirar(&fila0, i);
+            printf("Tempo %4d: Processo %2d chegou (burst: %d) -> Fila Q0\n",
+                   tempo_relogio, processos[i].pid, processos[i].tempo_execucao);
+        }
+    }
+}
+
 // Loop principal de simulação
 void simular() {
     printf("\n======== INICIO DA SIMULACAO ========\n");
@@ -237,7 +259,10 @@ void simular() {
     printf("====================================\n\n");
     
     while (tempo_relogio < TEMPO_MAXIMO && processos_terminados < total_processos) {
-        // Atualizar fila de I/O no início de cada unidade de tempo
+        // Adicionar processos que chegaram neste tempo
+        adicionar_processos_chegados();
+        
+        // Atualizar fila de I/O
         if (!fila_vazia(&fila_io)) {
             atualizar_fila_io();
         }
@@ -264,12 +289,13 @@ void mostrar_estatisticas() {
     float tempo_medio_espera = 0, tempo_medio_turnaround = 0;
     
     printf("\n======== ESTATISTICAS DA SIMULACAO ========\n");
-    printf("PID  Execucao  Espera  Turnaround\n");
-    printf("----------------------------------\n");
+    printf("PID  Chegada  Execucao  Espera  Turnaround\n");
+    printf("------------------------------------------\n");
     for (int i = 0; i < total_processos; i++) {
         int turnaround = processos[i].tempo_espera + processos[i].tempo_execucao;
-        printf("%2d      %3d       %3d      %3d\n", 
+        printf("%2d      %3d       %3d       %3d      %3d\n", 
                processos[i].pid,
+               processos[i].tempo_chegada,
                processos[i].tempo_execucao,
                processos[i].tempo_espera,
                turnaround);
@@ -293,7 +319,19 @@ void mostrar_estatisticas() {
     printf("==========================================\n");
 }
 
-int main() {
+void mostrar_uso() {
+    printf("Uso do simulador:\n");
+    printf("  scheduler.exe [arquivo_processos]\n\n");
+    printf("Se nenhum arquivo for especificado, sera usado 'processos.txt' por padrao.\n");
+    printf("Formato do arquivo:\n");
+    printf("  [tempo_chegada] [tempo_execucao]\n");
+    printf("  Exemplo:\n");
+    printf("    0 10\n");
+    printf("    1 5\n");
+    printf("    2 8\n");
+}
+
+int main(int argc, char *argv[]) {
     // Configurar locale para suportar acentuação
     setlocale(LC_ALL, "Portuguese");
     
@@ -302,9 +340,24 @@ int main() {
     inicializar_fila(&fila1);
     inicializar_fila(&fila_io);
 
-    // Criar processos
-    int num_processos = 5;
-    inicializar_processos(num_processos);
+    // Definir arquivo de entrada
+    const char *filename = "processos.txt";
+    
+    if (argc > 1) {
+        if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+            mostrar_uso();
+            return 0;
+        }
+        filename = argv[1];
+    }
+
+    // Carregar processos do arquivo
+    total_processos = carregar_processos(filename);
+    
+    if (total_processos == 0) {
+        printf("Nenhum processo carregado. Verifique o arquivo de entrada.\n");
+        return 1;
+    }
     
     // Executar simulação
     simular();

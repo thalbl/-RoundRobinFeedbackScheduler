@@ -1,173 +1,208 @@
-# Simulador de Escalonamento Round Robin com Feedback para Windows
+# Simulador de Escalonamento de Processos - Round Robin com Feedback
 
 ## Visão Geral
-Este projeto implementa um simulador de escalonamento de processos baseado no algoritmo Round Robin com Feedback, desenvolvido inteiramente em linguagem C e otimizado para execução em sistemas Windows. O simulador gerencia processos em múltiplas filas de prioridade com diferentes tempos de quantum e inclui suporte para operações de I/O com três tipos de dispositivos.
+Este projeto implementa um simulador de escalonamento de processos baseado no algoritmo Round Robin com Feedback. O simulador gerencia processos em múltiplas filas de prioridade, com diferentes tempos de quantum, e inclui suporte para operações de I/O (entrada/saída) com três tipos de dispositivos: disco, fita magnética e impressora. O simulador é desenvolvido inteiramente em linguagem C, conforme os requisitos especificados.
 
 ## Funcionalidades Principais
 
-### 🚀 Gerenciamento de Processos no Windows
-- Criação de processos com PID único e PCB (Process Control Block)
-- Estados de processo: Pronto Q0, Pronto Q1, Executando, EM_IO, Terminado
-- Tempos de serviço aleatórios (5-30 unidades)
-- Sistema de prioridades com múltiplas filas
+### 1. Gerenciamento de Processos
+- **Criação de processos** com PID único e informações de PCB (Process Control Block)
+- Estados do processo: 
+  - `READY_Q0` (alta prioridade)
+  - `READY_Q1` (baixa prioridade)
+  - `RUNNING` (em execução)
+  - `IO` (em operação de entrada/saída)
+  - `TERMINATED` (finalizado)
+- Tempos de serviço (burst time) aleatórios para cada processo (entre 5 e 30 unidades de tempo)
 
-### ⚙️ Sistema Multi-Filas
-- **Fila Q0 (Alta Prioridade)**: Quantum de 2 unidades
-- **Fila Q1 (Baixa Prioridade)**: Quantum de 4 unidades
-- **Fila de I/O**: Gerencia operações de entrada/saída
-- Políticas de retorno diferenciadas por tipo de I/O
+### 2. Sistema de Filas Multi-Nível
+- **Fila de Alta Prioridade (Q0)**: 
+  - Tempo quantum: 2 unidades
+  - Processos novos entram nesta fila
+- **Fila de Baixa Prioridade (Q1)**:
+  - Tempo quantum: 4 unidades
+  - Processos preemptados da Q0 são movidos para esta fila
+- **Fila de I/O**:
+  - Gerencia processos em operações de entrada/saída
+  - Diferentes tempos para cada dispositivo:
+    - Disco: 5 unidades de tempo
+    - Fita magnética: 3 unidades de tempo
+    - Impressora: 4 unidades de tempo
 
-### 🔄 Operações de I/O
-- Solicitação aleatória de I/O durante execução (10% de probabilidade)
-- Dispositivos suportados:
-  - **Disco**: 5 unidades → retorna para Q1
-  - **Fita Magnética**: 3 unidades → retorna para Q0
-  - **Impressora**: 4 unidades → retorna para Q0
+### 3. Política de Escalonamento
+- Prioridade para processos na fila Q0
+- Processos que sofrem preempção são movidos para Q1
+- Processos que retornam de I/O:
+  - Após operação de disco → fila Q1 (baixa prioridade)
+  - Após operação de fita magnética ou impressora → fila Q0 (alta prioridade)
+- Algoritmo de seleção: Sempre executa processos de Q0 antes de Q1
 
-### 📊 Análise de Desempenho
-- Log detalhado de eventos em tempo real
+### 4. Operações de Entrada/Saída (I/O)
+- Processos podem solicitar operações de I/O durante a execução (probabilidade de 10% por unidade de tempo)
+- Três tipos de dispositivos:
+  - **Disco**: Retorna para fila de baixa prioridade (Q1)
+  - **Fita Magnética**: Retorna para fila de alta prioridade (Q0)
+  - **Impressora**: Retorna para fila de alta prioridade (Q0)
+- Processos em I/O ficam bloqueados pelo tempo correspondente ao dispositivo
+
+### 5. Simulação e Log de Eventos
+- Execução em tempo discreto (unidades de tempo)
+- Log detalhado de eventos:
+  - Alocação da CPU a processos
+  - Solicitações e conclusões de I/O
+  - Preempção de processos
+  - Término de processos
+  - Tempos ociosos da CPU
+
+### 6. Estatísticas de Desempenho
 - Cálculo de métricas de desempenho:
-  - Tempo de espera por processo
-  - Turnaround time
-  - Utilização da CPU
-  - Tempos médios de espera e turnaround
-- Saída formatada para prompt de comando
-
-## Pré-requisitos para Windows
-- [MinGW-w64](https://sourceforge.net/projects/mingw-w64/) (compilador GCC para Windows)
-- [Git para Windows](https://git-scm.com/download/win) (opcional, mas recomendado)
-- Terminal (CMD, PowerShell ou Git Bash)
-
-## Configuração do Ambiente Windows
-
-### 1. Instalar o MinGW-w64
-1. Baixe o instalador do [MinGW-w64](https://sourceforge.net/projects/mingw-w64/)
-2. Durante a instalação, selecione:
-   - Architecture: `x86_64`
-   - Threads: `posix`
-   - Exception: `seh`
-3. Adicione o MinGW ao PATH do sistema:
-   - Pressione `Win + R`, digite `sysdm.cpl` e clique em OK
-   - Abra "Variáveis de Ambiente"
-   - Em "Variáveis do sistema", edite `Path`
-   - Adicione o caminho da pasta `bin` do MinGW (ex: `C:\mingw64\bin`)
-
-### 2. Clonar o repositório (com Git)
-```powershell
-git clone https://github.com/seu-usuario/RoundRobinFeedbackScheduler.git
-cd RoundRobinFeedbackScheduler
-```
-
-### 3. Compilar manualmente (sem Makefile)
-```powershell
-gcc -o bin/scheduler src/scheduler.c
-```
-
-### 4. Executar o simulador
-```powershell
-bin\scheduler.exe
-```
-
-## Script de Compilação Automática (Makefile para Windows)
-1. Instale o [Make para Windows](https://sourceforge.net/projects/gnuwin32/files/make/3.81/)
-2. Adicione o caminho do Make ao PATH (ex: `C:\Program Files (x86)\GnuWin32\bin`)
-3. Execute:
-
-```powershell
-make        # Compila o projeto
-make run    # Executa o simulador
-make clean  # Limpa os arquivos compilados
-```
-
-## Exemplo de Saída no Prompt de Comando
-```
-======== INICIO DA SIMULACAO ========
-Configuracao:
-- Processos: 5
-- Quantum Q0 (alta prioridade): 2
-- Quantum Q1 (baixa prioridade): 4
-- Probabilidade de I/O: 10%
-====================================
-
-Tempo    0: Processo  1 iniciou execucao (Q0, quantum: 2)
-Tempo    2: Processo  1 preemptado -> Fila Q1
-Tempo    2: Processo  2 iniciou execucao (Q0, quantum: 2)
-Tempo    4: Processo  2 solicitou I/O (DISCO)
-Tempo    4: Processo  3 iniciou execucao (Q0, quantum: 2)
-...
-Tempo   25: Processo  3 terminou. Espera:  8, Turnaround: 20
-
-======== ESTATISTICAS DA SIMULACAO ========
-PID  Execucao  Espera  Turnaround
-----------------------------------
- 1      12        5        17
- 2       8        3        11
- 3      15        8        23
- 4      10        6        16
- 5       7        4        11
-
-Metricas Gerais:
-- Tempo total de simulacao: 35 unidades
-- Processos concluidos: 5/5
-- Tempo medio de espera: 5.20
-- Tempo medio de turnaround: 15.60
-- Utilizacao da CPU: 92.50%
-==========================================
-```
-
-## Parâmetros de Configuração
-Ajuste no arquivo `src/scheduler.c`:
-
-```c
-#define MAX_PROCESSOS 100       // Número máximo de processos
-#define QUANTUM_Q0 2            // Tempo quantum para fila de alta prioridade
-#define QUANTUM_Q1 4            // Tempo quantum para fila de baixa prioridade
-#define PROBABILIDADE_IO 0.1    // Probabilidade de I/O (10%)
-#define TEMPO_MAXIMO 1000       // Tempo máximo de simulação
-
-// Tempos de I/O
-#define DISCO_IO 5
-#define FITA_IO 3
-#define IMPRESSORA_IO 4
-```
-
-## Solução de Problemas Comuns no Windows
-
-### Erro "gcc não é reconhecido"
-- Verifique a instalação do MinGW-w64
-- Confira se o caminho do `bin` do MinGW está no PATH do sistema
-- Reinicie o terminal após alterações no PATH
-
-### Erro ao executar o executável
-```powershell
-.\bin\scheduler.exe
-```
-Se o erro persistir, compile manualmente:
-```powershell
-gcc src/scheduler.c -o scheduler
-.\scheduler.exe
-```
-
-### Problemas com acentuação
-O projeto usa configuração de locale para suportar caracteres especiais:
-```c
-setlocale(LC_ALL, "Portuguese");
-```
-Se persistirem problemas, remova os acentos do código.
+  - Tempo de espera (waiting time) por processo
+  - Turnaround time (tempo total do processo)
+  - Médias de tempo de espera e turnaround
+  - Porcentagem de utilização da CPU
 
 ## Premissas do Simulador
-1. **Limite de processos**: Máximo de 100 processos
-2. **Tempos de quantum**:
-   - Fila Q0: 2 unidades
-   - Fila Q1: 4 unidades
-3. **Geração aleatória**:
-   - Tempo de serviço: 5-30 unidades
-   - Probabilidade de I/O: 10% por unidade de tempo
-4. **Duração de I/O**:
-   - Disco: 5 unidades
-   - Fita magnética: 3 unidades
-   - Impressora: 4 unidades
-5. **Entrada nas filas**:
-   - Novos processos: Q0
-   - Retorno de I/O: Disco → Q1, Fita/Impressora → Q0
-   - Processos preemptados: Q1
+
+1. **Limite máximo de processos**: 100
+2. **Tempo de quantum**:
+   - Fila Q0 (alta prioridade): 2 unidades de tempo
+   - Fila Q1 (baixa prioridade): 4 unidades de tempo
+3. **Tempos de serviço e I/O aleatórios**:
+   - Tempo de serviço (burst time): 5-30 unidades (aleatório)
+   - Probabilidade de I/O: 10% por unidade de tempo de execução
+4. **Duração de operações de I/O**:
+   - Disco: 5 unidades de tempo
+   - Fita magnética: 3 unidades de tempo
+   - Impressora: 4 unidades de tempo
+5. **Entrada nas filas de prontos**:
+   - Processos novos: fila de alta prioridade (Q0)
+   - Processos que retornam de I/O: 
+     - Disco → fila de baixa prioridade (Q1)
+     - Fita magnética/Impressora → fila de alta prioridade (Q0)
+   - Processos preemptados: fila de baixa prioridade (Q1)
+
+## Estrutura do Código
+
+### Estruturas de Dados Principais
+- **`PCB` (Process Control Block)**:
+  - Armazena todas as informações do processo (PID, estado, tempos, etc.)
+- **`Queue`**:
+  - Implementação de fila circular para gerenciar as filas de processos
+- **Processos**:
+  - Array de estruturas PCB para gerenciar todos os processos
+
+### Funções Principais
+1. **`initialize_processes()`**:
+   - Cria processos iniciais com valores aleatórios
+   - Inicializa todas as estruturas de dados
+
+2. **`update_io_queue()`**:
+   - Gerencia a fila de I/O e atualiza os tempos restantes
+   - Move processos de volta às filas de prontos ao completar I/O
+
+3. **`schedule()`**:
+   - Seleciona o próximo processo para execução
+   - Implementa a política de prioridade entre filas
+
+4. **`run_cpu()`**:
+   - Executa a CPU por uma unidade de tempo
+   - Gerencia eventos: término, I/O, preempção
+
+5. **`simulate()`**:
+   - Loop principal da simulação
+   - Orquestra todas as operações por unidade de tempo
+
+6. **`print_statistics()`**:
+   - Calcula e exibe estatísticas finais de desempenho
+
+## Compilação e Execução
+
+### Requisitos
+- Compilador C (gcc recomendado)
+- Sistema operacional Linux/Unix (ou ambiente compatível)
+
+### Compilação
+```bash
+gcc -o scheduler scheduler.c
+```
+
+### Execução
+```bash
+./scheduler
+```
+
+### Parâmetros de Configuração (no código)
+- `MAX_PROCESSES`: Número máximo de processos (padrão: 100)
+- `QUANTUM_Q0`: Tempo quantum para fila de alta prioridade (padrão: 2)
+- `QUANTUM_Q1`: Tempo quantum para fila de baixa prioridade (padrão: 4)
+- `IO_PROBABILITY`: Probabilidade de solicitação de I/O (padrão: 0.1)
+- `MAX_TIME`: Tempo máximo de simulação (padrão: 1000 unidades)
+
+## Saída do Simulador
+
+### Durante a Execução
+Log detalhado de eventos:
+```
+Time 0: Process 1 requests I/O (type: DISK)
+Time 1: CPU idle
+Time 2: Running process 2 (Q0, quantum: 2)
+...
+Time 25: Process 3 terminated. Waiting: 8, Turnaround: 20
+```
+
+### Ao Final da Simulação
+Estatísticas completas:
+```
+Process Statistics:
+PID     Burst   Waiting Turnaround
+1       12      5       17
+2       8       3       11
+3       15      8       23
+4       10      6       16
+5       7       4       11
+
+Average Waiting Time: 5.20
+Average Turnaround Time: 15.60
+CPU Utilization: 92.50%
+```
+
+## Exemplo de Execução
+
+```bash
+# Compilar
+gcc -o scheduler scheduler.c
+
+# Executar
+./scheduler
+
+# Saída esperada (exemplo)
+Time 0: Process 1 started (Burst: 12)
+Time 0: Running process 1 (Q0, quantum: 2)
+Time 2: Process 1 preempted to Q1
+Time 2: Running process 2 (Q0, quantum: 2)
+...
+Time 35: Simulation completed
+
+Process Statistics:
+PID     Burst   Waiting Turnaround
+1       12      7       19
+2       9       5       14
+3       14      9       23
+4       8       4       12
+5       11      6       17
+
+Average Waiting Time: 6.20
+Average Turnaround Time: 17.00
+CPU Utilization: 88.57%
+```
+
+## Considerações Finais
+
+Este simulador implementa fielmente o algoritmo Round Robin com Feedback, atendendo a todos os requisitos especificados. A estrutura modular do código permite fácil expansão para:
+
+- Adicionar mais filas de prioridade
+- Implementar outras políticas de escalonamento
+- Incluir mais tipos de dispositivos de I/O
+- Adicionar gráficos de Gantt para visualização do escalonamento
+
+O simulador serve como uma ferramenta educacional valiosa para compreender os mecanismos de escalonamento de processos em sistemas operacionais e os efeitos das políticas de prioridade no desempenho do sistema.

@@ -6,7 +6,7 @@ TARGET = $(BINDIR)/scheduler
 
 all: $(TARGET)
 
-$(TARGET): $(SRCDIR)/scheduler.c
+$(TARGET): $(SRCDIR)/scheduler_with_text.c
 	@mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) -o $@ $<
 
