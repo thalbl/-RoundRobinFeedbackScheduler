@@ -1,208 +1,209 @@
-# Simulador de Escalonamento de Processos - Round Robin com Feedback
+# Simulador de Escalonamento Round Robin com Feedback
 
 ## Visão Geral
-Este projeto implementa um simulador de escalonamento de processos baseado no algoritmo Round Robin com Feedback. O simulador gerencia processos em múltiplas filas de prioridade, com diferentes tempos de quantum, e inclui suporte para operações de I/O (entrada/saída) com três tipos de dispositivos: disco, fita magnética e impressora. O simulador é desenvolvido inteiramente em linguagem C, conforme os requisitos especificados.
+Este projeto implementa um simulador de escalonamento de processos baseado no algoritmo Round Robin com Feedback, desenvolvido em linguagem C. Oferecemos **duas versões complementares** do simulador para diferentes necessidades:
 
-## Funcionalidades Principais
+1. **Versão com entrada aleatória**: Gera processos automaticamente com tempos de execução aleatórios
+2. **Versão com entrada por arquivo**: Permite carregar configurações personalizadas de processos via arquivo texto
 
-### 1. Gerenciamento de Processos
-- **Criação de processos** com PID único e informações de PCB (Process Control Block)
-- Estados do processo: 
-  - `READY_Q0` (alta prioridade)
-  - `READY_Q1` (baixa prioridade)
-  - `RUNNING` (em execução)
-  - `IO` (em operação de entrada/saída)
-  - `TERMINATED` (finalizado)
-- Tempos de serviço (burst time) aleatórios para cada processo (entre 5 e 30 unidades de tempo)
+Ambas as versões compartilham o mesmo núcleo de escalonamento e oferecem análise detalhada do desempenho do sistema.
 
-### 2. Sistema de Filas Multi-Nível
-- **Fila de Alta Prioridade (Q0)**: 
-  - Tempo quantum: 2 unidades
-  - Processos novos entram nesta fila
-- **Fila de Baixa Prioridade (Q1)**:
-  - Tempo quantum: 4 unidades
-  - Processos preemptados da Q0 são movidos para esta fila
-- **Fila de I/O**:
-  - Gerencia processos em operações de entrada/saída
-  - Diferentes tempos para cada dispositivo:
-    - Disco: 5 unidades de tempo
-    - Fita magnética: 3 unidades de tempo
-    - Impressora: 4 unidades de tempo
+## Características Comuns
 
-### 3. Política de Escalonamento
-- Prioridade para processos na fila Q0
-- Processos que sofrem preempção são movidos para Q1
-- Processos que retornam de I/O:
-  - Após operação de disco → fila Q1 (baixa prioridade)
-  - Após operação de fita magnética ou impressora → fila Q0 (alta prioridade)
-- Algoritmo de seleção: Sempre executa processos de Q0 antes de Q1
+### ⚙️ Mecanismo de Escalonamento
+- **Filas Multi-Nível**:
+  - Q0 (Alta Prioridade): Quantum de 2 unidades
+  - Q1 (Baixa Prioridade): Quantum de 4 unidades
+- **Políticas de Feedback**:
+  - Processos preemptados → Q1
+  - Retorno de I/O:
+    - Disco → Q1
+    - Fita magnética/Impressora → Q0
+- Processos novos sempre entram em Q0
 
-### 4. Operações de Entrada/Saída (I/O)
-- Processos podem solicitar operações de I/O durante a execução (probabilidade de 10% por unidade de tempo)
+### 🔄 Sistema de Entrada/Saída (I/O)
+- Solicitação aleatória durante execução (10% de probabilidade)
 - Três tipos de dispositivos:
-  - **Disco**: Retorna para fila de baixa prioridade (Q1)
-  - **Fita Magnética**: Retorna para fila de alta prioridade (Q0)
-  - **Impressora**: Retorna para fila de alta prioridade (Q0)
-- Processos em I/O ficam bloqueados pelo tempo correspondente ao dispositivo
+  - **Disco**: 5 unidades de tempo
+  - **Fita Magnética**: 3 unidades de tempo
+  - **Impressora**: 4 unidades de tempo
 
-### 5. Simulação e Log de Eventos
-- Execução em tempo discreto (unidades de tempo)
-- Log detalhado de eventos:
-  - Alocação da CPU a processos
-  - Solicitações e conclusões de I/O
-  - Preempção de processos
-  - Término de processos
-  - Tempos ociosos da CPU
+### 📊 Análise de Desempenho
+- Log detalhado de eventos em tempo real
+- Estatísticas completas ao final:
+  - Tempo de espera e turnaround por processo
+  - Médias gerais de desempenho
+  - Utilização da CPU
+  - Tempo total de simulação
 
-### 6. Estatísticas de Desempenho
-- Cálculo de métricas de desempenho:
-  - Tempo de espera (waiting time) por processo
-  - Turnaround time (tempo total do processo)
-  - Médias de tempo de espera e turnaround
-  - Porcentagem de utilização da CPU
+## Versão 1: Entrada Aleatória
 
-## Premissas do Simulador
+### Características
+- Gera automaticamente processos com:
+  - Tempo de execução aleatório (5-30 unidades)
+  - Todos os processos chegam no tempo 0
+- Ideal para testes rápidos e análise de comportamento geral
 
-1. **Limite máximo de processos**: 100
-2. **Tempo de quantum**:
-   - Fila Q0 (alta prioridade): 2 unidades de tempo
-   - Fila Q1 (baixa prioridade): 4 unidades de tempo
-3. **Tempos de serviço e I/O aleatórios**:
-   - Tempo de serviço (burst time): 5-30 unidades (aleatório)
-   - Probabilidade de I/O: 10% por unidade de tempo de execução
-4. **Duração de operações de I/O**:
-   - Disco: 5 unidades de tempo
-   - Fita magnética: 3 unidades de tempo
-   - Impressora: 4 unidades de tempo
-5. **Entrada nas filas de prontos**:
-   - Processos novos: fila de alta prioridade (Q0)
-   - Processos que retornam de I/O: 
-     - Disco → fila de baixa prioridade (Q1)
-     - Fita magnética/Impressora → fila de alta prioridade (Q0)
-   - Processos preemptados: fila de baixa prioridade (Q1)
-
-## Estrutura do Código
-
-### Estruturas de Dados Principais
-- **`PCB` (Process Control Block)**:
-  - Armazena todas as informações do processo (PID, estado, tempos, etc.)
-- **`Queue`**:
-  - Implementação de fila circular para gerenciar as filas de processos
-- **Processos**:
-  - Array de estruturas PCB para gerenciar todos os processos
-
-### Funções Principais
-1. **`initialize_processes()`**:
-   - Cria processos iniciais com valores aleatórios
-   - Inicializa todas as estruturas de dados
-
-2. **`update_io_queue()`**:
-   - Gerencia a fila de I/O e atualiza os tempos restantes
-   - Move processos de volta às filas de prontos ao completar I/O
-
-3. **`schedule()`**:
-   - Seleciona o próximo processo para execução
-   - Implementa a política de prioridade entre filas
-
-4. **`run_cpu()`**:
-   - Executa a CPU por uma unidade de tempo
-   - Gerencia eventos: término, I/O, preempção
-
-5. **`simulate()`**:
-   - Loop principal da simulação
-   - Orquestra todas as operações por unidade de tempo
-
-6. **`print_statistics()`**:
-   - Calcula e exibe estatísticas finais de desempenho
-
-## Compilação e Execução
-
-### Requisitos
-- Compilador C (gcc recomendado)
-- Sistema operacional Linux/Unix (ou ambiente compatível)
-
-### Compilação
-```bash
-gcc -o scheduler scheduler.c
-```
-
-### Execução
-```bash
-./scheduler
-```
-
-### Parâmetros de Configuração (no código)
-- `MAX_PROCESSES`: Número máximo de processos (padrão: 100)
-- `QUANTUM_Q0`: Tempo quantum para fila de alta prioridade (padrão: 2)
-- `QUANTUM_Q1`: Tempo quantum para fila de baixa prioridade (padrão: 4)
-- `IO_PROBABILITY`: Probabilidade de solicitação de I/O (padrão: 0.1)
-- `MAX_TIME`: Tempo máximo de simulação (padrão: 1000 unidades)
-
-## Saída do Simulador
-
-### Durante a Execução
-Log detalhado de eventos:
-```
-Time 0: Process 1 requests I/O (type: DISK)
-Time 1: CPU idle
-Time 2: Running process 2 (Q0, quantum: 2)
-...
-Time 25: Process 3 terminated. Waiting: 8, Turnaround: 20
-```
-
-### Ao Final da Simulação
-Estatísticas completas:
-```
-Process Statistics:
-PID     Burst   Waiting Turnaround
-1       12      5       17
-2       8       3       11
-3       15      8       23
-4       10      6       16
-5       7       4       11
-
-Average Waiting Time: 5.20
-Average Turnaround Time: 15.60
-CPU Utilization: 92.50%
-```
-
-## Exemplo de Execução
-
+### Como Usar
 ```bash
 # Compilar
-gcc -o scheduler scheduler.c
+gcc -o scheduler_rand scheduler_rand.c
 
-# Executar
-./scheduler
-
-# Saída esperada (exemplo)
-Time 0: Process 1 started (Burst: 12)
-Time 0: Running process 1 (Q0, quantum: 2)
-Time 2: Process 1 preempted to Q1
-Time 2: Running process 2 (Q0, quantum: 2)
-...
-Time 35: Simulation completed
-
-Process Statistics:
-PID     Burst   Waiting Turnaround
-1       12      7       19
-2       9       5       14
-3       14      9       23
-4       8       4       12
-5       11      6       17
-
-Average Waiting Time: 6.20
-Average Turnaround Time: 17.00
-CPU Utilization: 88.57%
+# Executar (5 processos por padrão)
+./scheduler_rand
 ```
 
-## Considerações Finais
+### Exemplo de Saída
+```
+Tempo    0: Processo  1 iniciou execucao (Q0, quantum: 2)
+Tempo    2: Processo  1 preemptado -> Fila Q1
+Tempo    2: Processo  2 iniciou execucao (Q0, quantum: 2)
+...
+Tempo   25: Processo  3 terminou. Espera:  8, Turnaround: 20
 
-Este simulador implementa fielmente o algoritmo Round Robin com Feedback, atendendo a todos os requisitos especificados. A estrutura modular do código permite fácil expansão para:
+======== ESTATISTICAS DA SIMULACAO ========
+PID  Execucao  Espera  Turnaround
+----------------------------------
+ 1      12        5        17
+ 2       8        3        11
+ 3      15        8        23
+...
+```
 
-- Adicionar mais filas de prioridade
-- Implementar outras políticas de escalonamento
-- Incluir mais tipos de dispositivos de I/O
-- Adicionar gráficos de Gantt para visualização do escalonamento
+## Versão 2: Entrada por Arquivo
 
-O simulador serve como uma ferramenta educacional valiosa para compreender os mecanismos de escalonamento de processos em sistemas operacionais e os efeitos das políticas de prioridade no desempenho do sistema.
+### Características
+- Permite definir processos personalizados via arquivo texto
+- Especifica tempo de chegada e tempo de execução para cada processo
+- Ideal para testar cenários específicos e reproduzíveis
+
+### Formato do Arquivo
+Crie um arquivo de texto com o formato:
+```
+[tempo_chegada] [tempo_execucao]
+[tempo_chegada] [tempo_execucao]
+...
+```
+
+Exemplo (`processos.txt`):
+```
+0 10
+1 5
+2 8
+3 12
+4 7
+```
+
+### Como Usar
+```bash
+# Compilar
+gcc -o scheduler_file scheduler_file.c
+
+# Executar com arquivo personalizado
+./scheduler_file processos.txt
+
+# Ajuda
+./scheduler_file --help
+```
+
+### Exemplo de Saída
+```
+Tempo    0: Processo  1 chegou (burst: 10) -> Fila Q0
+Tempo    0: Processo  1 iniciou execucao (Q0, quantum: 2)
+Tempo    0: Processo  1 solicitou I/O (IMPRESSORA)
+Tempo    1: Processo  2 chegou (burst: 5) -> Fila Q0
+...
+Tempo   30: Processo  5 terminou. Espera:  5, Turnaround: 12
+
+======== ESTATISTICAS DA SIMULACAO ========
+PID  Chegada  Execucao  Espera  Turnaround
+------------------------------------------
+ 1       0        10        5        15
+ 2       1         5        3         8
+ 3       2         8        6        14
+...
+```
+
+## Comportamento Esperado e Validação
+
+### Cenários Normais
+1. **Processos solicitando I/O imediatamente**:
+   ```bash
+   Tempo 0: Processo 1 iniciou execução
+   Tempo 0: Processo 1 solicitou I/O
+   ```
+   - **Por que ocorre**: Probabilidade de 10% por unidade de tempo
+   - **É normal**: Reflete situações reais onde processos tem operações de I/O intensivas
+
+2. **Múltiplos eventos simultâneos**:
+   ```bash
+   Tempo 4: Processo 5 chegou -> Fila Q0
+   Tempo 4: Processo 1 completou I/O -> Fila Q0
+   Tempo 4: Processo 2 completou I/O -> Fila Q0
+   Tempo 4: Processo 4 iniciou execução
+   ```
+   - **Ordem de processamento**: 
+     1. Chegada de novos processos
+     2. Conclusão de operações de I/O
+     3. Escalonamento de processos prontos
+
+3. **Preempção por quantum**:
+   ```bash
+   Tempo 5: Processo 4 preemptado -> Fila Q1
+   ```
+   - Ocorre quando um processo completa seu tempo de quantum sem terminar
+
+### Vantagens das Duas Versões
+| Característica               | Versão Aleatória         | Versão com Arquivo       |
+|------------------------------|--------------------------|--------------------------|
+| Configuração inicial         | Automática               | Personalizada           |
+| Tempos de chegada            | Todos tempo 0            | Definidos por linha     |
+| Tempos de execução           | Aleatórios (5-30)        | Especificados           |
+| Casos de uso                 | Testes rápidos           | Cenários específicos    |
+| Reprodutibilidade            | Baixa (randômica)        | Alta (determinística)   |
+| Análise de casos extremos    | Limitada                 | Completa                |
+
+## Estrutura do Projeto
+```
+RoundRobinFeedbackScheduler/
+├── src/
+│   ├── processos.txt
+│   ├── scheduler_rand.c     # Versão com processos aleatórios
+│   └── scheduler_file.c     # Versão com entrada por arquivo
+├── Makefile                 # Script de compilação
+└── README.md                # Este documento
+```
+
+## Análise de Casos Especiais
+
+### Caso 1: Processo solicita I/O imediatamente
+**Arquivo de entrada**:
+```
+0 10
+```
+
+**Comportamento esperado**:
+```
+Tempo 0: Processo 1 chegou -> Fila Q0
+Tempo 0: Processo 1 iniciou execução (Q0, quantum: 2)
+Tempo 0: Processo 1 solicitou I/O (DISCO)  # Caso ocorra a probabilidade
+Tempo 5: Processo 1 completou I/O (DISCO) -> Fila Q1
+...
+```
+
+### Caso 2: Múltiplos processos chegando simultaneamente
+**Arquivo de entrada**:
+```
+0 5
+0 8
+0 6
+```
+
+**Comportamento esperado**:
+```
+Tempo 0: Processo 1 chegou -> Fila Q0
+Tempo 0: Processo 2 chegou -> Fila Q0
+Tempo 0: Processo 3 chegou -> Fila Q0
+Tempo 0: Processo 1 iniciou execução (Q0, quantum: 2)
+...
+```
