@@ -9,7 +9,7 @@
 #define TAMANHO_FILA 100
 #define QUANTUM_Q0 2
 #define QUANTUM_Q1 4
-#define PROBABILIDADE_IO 0.2
+#define PROBABILIDADE_IO 0.1
 #define TEMPO_MAXIMO 1000
 
 // Estados do processo
